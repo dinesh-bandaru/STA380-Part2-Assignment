@@ -13,6 +13,6 @@ This repo consists of solutions to coursework STA380- Part 2 for Prof. James Sco
 * [Visual storytelling part 2: Capital Metro data](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/CapMetro.ipynb)
 * Clustering and dimensionality reduction
 * Marketing segmentation
-* The Reuters corpus
+* [The Reuters corpus](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Reuters_Corpus_Q7.ipynb)
 * Association rule mining
-* Image classification with neural networks
+* [Image classification with neural networks](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/ImageClassification.ipynb)
