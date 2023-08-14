@@ -7,9 +7,9 @@ Team:
 * Vaishnavi Ganesh
 
 This repo consists of solutions to coursework STA380- Part 2 for Prof. James Scott's Classes. In this repo we have covered and answered the following concepts:
-* Probability Practice
-* Wrangling the Billboard Top 100
-* Visual storytelling part 1: Green Buildings
+* [Probability Practice](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Problems-1-3.pdf)
+* [Wrangling the Billboard Top 100](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Problems-1-3.pdf)
+* [Visual storytelling part 1: Green Buildings](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Problems-1-3.pdf)
 * [Visual storytelling part 2: Capital Metro data](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/CapMetro.ipynb)
 * [Clustering and dimensionality reduction](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Dimensionality%20Reduction%20and%20Market%20Segmentation_Q5%266.ipynb)
 * [Marketing segmentation](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Dimensionality%20Reduction%20and%20Market%20Segmentation_Q5%266.ipynb)
