@@ -1,0 +1,259 @@
+---
+title: "groceries_Arm"
+output: html_document
+date: "2023-08-10"
+---
+
+```{r setup, echo = FALSE, include=FALSE, warning = FALSE}
+
+library(tidyverse)
+library(igraph)
+library(arules)  # has a big ecosystem of packages built around it
+library(arulesViz)
+library(tidyr)
+library(ggplot2)
+
+```
+
+
+# Reading the data
+
+```{r, echo = FALSE, warning = FALSE}
+
+grocery_raw <- readLines("C:/Users/Sai/OneDrive/Desktop/College_Stuff/Intro_to_ML_Stuff/Unsupervised Learning James Scott/apriori_Alg/groceries.txt")
+grocery_raw <- strsplit(as.character(grocery_raw), split=",")
+grocery_raw_1 <- plyr::ldply(grocery_raw, rbind)
+grocery_raw_1 <- grocery_raw_1 %>% mutate(Session = row_number())
+
+```
+
+
+# Reading the data in long format
+
+```{r, echo = FALSE, warning = FALSE}
+
+grocery_raw_long <- pivot_longer(grocery_raw_1, -c(Session), values_to = "Value", names_to = "Items")
+grocery_raw_long <- grocery_raw_long %>% drop_na()
+
+```
+
+
+# Identify the most bought items
+
+```{r, echo = FALSE, warning = FALSE}
+
+summary_df <- dplyr::count(grocery_raw_long, Value, sort = TRUE)
+colnames(summary_df) <- c("Product", "Count_of_Prod")
+top_20 = head(summary_df, 20)
+
+top_20 <- top_20[order(top_20$Count_of_Prod, decreasing = TRUE), ]
+
+
+ggplot(top_20, aes(x = Product, y = Count_of_Prod)) + 
+  geom_bar(stat = "identity", color = 'pink', fill='pink') +
+  coord_flip()
+
+```
+
+
+We see that Whole milk, Other vegetable, Rolls/buns and Soda are the top 4 frequently bought products.
+
+
+# Splitting data to use the apriori algorithm
+
+```{r, echo = FALSE, warning = FALSE}
+
+# Turn user into a factor
+grocery_raw_long_fin <- subset(grocery_raw_long, select = c(Session, Value))
+grocery_raw_long_fin$Session = factor(grocery_raw_long_fin$Session)
+
+# First split data into a list of groceries for each user
+groceries = split(x=grocery_raw_long_fin$Value, f=grocery_raw_long_fin$Session)
+
+## Remove duplicates ("de-dupe")
+groceries = lapply(groceries, unique)
+
+## Cast this variable as a special arules "transactions" class.
+groc_trans = as(groceries, "transactions")
+summary(groc_trans)
+
+```
+
+
+# Running the 'apriori' algorithm
+
+
+## Rule 1
+
+Here we have a support of 0.005 and confidence of 0.1. This indicates that atleast 0.5% of all the transactions have that particular combination of products and out of all the antecedents at least 10% of them is a consequent. For example, if cereal is the antecedent, and milk is consequent, then of the orders containing cereals, 10% of them are likely to have whole milk.
+
+```{r, echo = FALSE, warning = FALSE}
+
+groc_rules_1 <- apriori(groc_trans, parameter=list(support=.005, confidence=.1))
+inspect(head(sort(groc_rules_1, by = 'lift'), 10))
+
+```
+
+In the above table, I have taken a support of 0.005 and a confidence of 0.1.
+
+Plotting the above rules
+
+
+```{r, echo = FALSE, warning = FALSE}
+
+plot(groc_rules_1)
+plot(groc_rules_1, measure = c("support", "lift"), shading = "confidence")
+plot(groc_rules_1, method='two-key plot')
+plot(groc_rules_1, method='grouped')
+plot(groc_rules_1, method='graph')
+
+```
+
+The first graph is a general plot of all the rules with support on the x axis and confidence on the y axis and lift being the indicator. We see that there is high lift for low support and slightlty low confidence values in general.
+
+The second graph is a modification of the first where the y axis is replaced with lift instead of the confidence and the confidence is the indicator. We see that rules with high lift have a confidence of 40% or higher but a low support
+
+The 3rd graph gives us the number of items in our rule. Most rules have 2 to 3 items
+
+The 4th graph gives us a grouped data where the size of the circle represents the support and the color of the circle represents the lift
+
+The 5th graph is a network chart showing the connections between the rules
+
+
+## Rule 2
+
+Here we have a support of 0.01 and confidence of 0.5. This indicates that atleast 1% of all the transactions have that particular combination of products and out of all the antecedents at least 50% of them is a consequent. For example, if cereal is the antecedent, and milk is consequent, then of the orders containing cereals, 50% of them are likely to have whole milk. We have added a new parameter called minlen where the minimum length of the antecedents is 2 products.
+
+```{r, echo = FALSE, warning = FALSE}
+
+groc_rules_2 <- apriori(groc_trans, parameter=list(support=.01, confidence=.5, minlen = 2))
+inspect(groc_rules_2)
+
+```
+
+In the above table, we have a total of 15 rules. I have taken a support of 0.01 and a confidence of 0.5. we have a lift ranging from 2 to 3 indicating that customers buying the antecedent are highly likely to buy the consequent. The confidence here is higher than 50%. We see that the consequent is whole milk  and other vegetables which is a common and most frequent product. 
+
+
+Plotting the above results we get the following:
+
+```{r, echo = FALSE, warning = FALSE}
+
+plot(groc_rules_2)
+plot(groc_rules_2, measure = c("support", "lift"), shading = "confidence")
+plot(groc_rules_2, method='two-key plot')
+plot(groc_rules_2, method='grouped')
+plot(groc_rules_2, method='graph')
+
+```
+
+In the first graph we see that there is high lift for low support and high confidence values in general.
+
+The second graph we see that rules with high lift have a confidence of 50% or higher but a low support
+
+The 3rd graph gives us the number of items in our rule. All rules have 2 items
+
+Focusing on the largest circle and the darkest circle, the 4th graph tells us that the customers who buy other vegetables and yogurt are more likely to buy whole milk whereas customers who buy tropical fruits and root vegetables are most likely to buy other vegetables. 
+
+The 5th graph is a network chart showing the connections between the rules which is similar to the 4th graph
+
+
+## Rule 3
+
+Here we have a support of 0.005 and confidence of 0.1. This indicates that atleast 0.5% of all the transactions have that particular combination of products and out of all the antecedents at least 80% of them is a consequent. For example, if cereal is the antecedent, and milk is consequent, then of the orders containing cereals, 80% of them are likely to have whole milk. We have added a new parameter called maxlen where the maximum length of the antecedents is 5 products.
+
+```{r, echo = FALSE, warning = FALSE}
+
+groc_rules_3 <- apriori(groc_trans, parameter=list(support=.008, confidence=.8, maxlen = 5))
+groc_rules_3a <- head(sort(groc_rules_3, by = 'lift'), 10)
+inspect(groc_rules_3a)
+
+```
+
+
+With the above criteria, we did not generate any results implying that no rule was 80% strong with a max length of 5 items in the basket. 
+
+
+## Rule 4
+
+Here we have a support of 0.008 and confidence of 0.5. This indicates that atleast 0.8% of all the transactions have that particular combination of products and out of all the antecedents at least 50% of them is a consequent. For example, if cereal is the antecedent, and milk is consequent, then of the orders containing cereals, 50% of them are likely to have whole milk. We have set the max length of the products to 5.
+
+```{r, echo = FALSE, warning = FALSE}
+
+groc_rules_4 <- apriori(groc_trans, parameter=list(support=.008, confidence=.5, maxlen = 5))
+groc_rules_4a <- head(sort(groc_rules_4, by = 'lift'), 10)
+inspect(groc_rules_4a)
+
+```
+
+
+
+In the above set of rules, we have a total of 30 rules. We will be investigating the first 10 based on lift for ease of interpretation. I have taken a support of 0.008 and a confidence of 0.5. we have a lift ranging from 2 to 3 indicating that customers buying the antecedent are highly likely to buy the consequent. The confidence here is higher than 50%. We see that the consequent is whole milk  and other vegetables which is a common and most frequent product. 
+
+
+Plotting the above results we get the following:
+
+```{r, echo = FALSE, warning = FALSE}
+
+plot(groc_rules_4a)
+plot(groc_rules_4a, measure = c("support", "lift"), shading = "confidence")
+plot(groc_rules_4a, method='two-key plot')
+plot(groc_rules_4a, method='grouped')
+plot(groc_rules_4a, method='graph')
+
+```
+
+In the first graph we see that there is high lift for avg to high support and avg confidence values in general.
+
+The second graph we see that rules with low lift have a confidence of 55% or higher but a low support
+
+The 3rd graph gives us the number of items in our rule. All rules have 3 items
+
+Focusing on the largest circle and the darkest circle (which happen to be the same here), the 4th graph tells us that the customers who buy tropical fruits and root vegetables are most likely to buy other vegetables. 
+
+The 5th graph is a network chart showing the connections between the rules which is similar to the 4th graph.Here we see that all the vegetables are grouped closer to each other
+
+
+
+## Rule 5
+
+Here we have a support of 0.005 and confidence of 0.6. This indicates that atleast 0.5% of all the transactions have that particular combination of products and out of all the antecedents at least 65% of them is a consequent. For example, if cereal is the antecedent, and milk is consequent, then of the orders containing cereals, 65 of them are likely to have whole milk. We have set the max length of the products to 5 and sorted the results by confidence.
+
+```{r, echo = FALSE, warning = FALSE}
+
+groc_rules_5 <- apriori(groc_trans, parameter=list(support=.005, confidence=.65, maxlen = 5))
+groc_rules_5a <- head(sort(groc_rules_5, by = 'confidence', ascending = TRUE), 10)
+inspect(groc_rules_5a)
+
+```
+
+
+
+In the above set of rules, we have a total of 3 rules. I have taken a support of 0.008 and a confidence of 0.65. we have a lift ranging from 2.55 to 2.75 indicating that customers buying the antecedent are highly likely to buy the consequent. The confidence here is higher than 65%. We see that the consequent is whole milk.
+
+
+Plotting the above results we get the following:
+
+```{r, echo = FALSE, warning = FALSE}
+
+plot(groc_rules_5a)
+plot(groc_rules_5a, measure = c("support", "lift"), shading = "confidence")
+plot(groc_rules_5a, method='two-key plot')
+plot(groc_rules_5a, method='grouped')
+plot(groc_rules_5a, method='graph')
+
+```
+
+In the first graph we see that there is high lift for a confidence value of 70%.
+
+The second graph tells a similar story as the first where we see a high lift and confidence but low support
+
+The 3rd graph gives us the number of items in our rule. 2 of the 3 rules have 4 items and one of them has 3 items
+
+Focusing on the darkest circle, the 4th graph tells us that the customers who buy tropical fruits, yogurt and another item tend to buy whole milk
+
+The 5th graph is a network chart showing the connections between the rules which is similar to the 4th graph.
+
+
+
+Thus we have seen examples of 5 different cases of association rule mining. Based on our use case and requirements, these rules can be modified to our benefit as required. 
+
