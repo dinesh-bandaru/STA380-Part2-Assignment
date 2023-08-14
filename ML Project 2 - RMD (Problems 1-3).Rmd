@@ -1,0 +1,351 @@
+---
+title: "ML - Project 2"
+output: pdf_document
+date: "2023-08-07"
+---
+
+```{r libraries,echo=FALSE,warning=FALSE}
+library(tidyverse)
+library(corrplot)
+library(dplyr)
+library(zoo)
+```
+
+### Probability Practice
+
+#### Part A
+
+Overall probability of someone answering "Yes" is 65%, so P(Yes) = 0.65
+
+Probability of being a random clicker as P(Random) = 0.3
+
+Probability of a random clicker choosing "Yes" is 0.5
+
+According to the rule of total probability - P(Yes) = P(Yes,Truthful) + P(Yes,Random)
+
+=\> 0.65 = P(Yes,Truthful) + [P(Random) \* P(Yes \| Random)]
+
+=\> 0.65 = P(Yes,Truthful) + [0.3 \* 0.5]
+
+Now, solving for P(Yes,Truthful):
+
+=\> P(Yes\|Truthful) = 0.65 - [0.3 \* 0.5]
+
+=\> P(Yes\|Truthful) = 0.65 - 0.15
+
+=\> **P(Yes\|Truthful) = 0.5**
+
+Approximately 50% of truthful clickers answered "Yes" to the survey.
+
+### Wrangling the Billboard Top 100
+
+#### Part A
+
+```{r billboardA, echo=FALSE, warning=FALSE}
+billboard <- read.csv("C:/Vaishnavi files/01 MSBA Files/04 Subjects/01 Summer/01 Introduction to Machine Learning/billboard.csv")
+
+top_10<-billboard%>%
+  group_by(song,performer)%>%
+  summarise(count_instances=n())%>%
+  arrange(desc(count_instances))
+print("Top 10 most popular songs since 1958 from Billboard")
+print(top_10[1:10, ])
+```
+
+#### Part B
+
+```{r billboardB, echo=FALSE,warning=FALSE}
+musical_diversity<-billboard%>%
+  group_by(year,song,performer)%>%
+  summarise(count_instances=n())
+
+uniques_by_year<-musical_diversity%>%
+  filter(year>1958 & year<2021)%>%
+  group_by(year)%>%
+  summarise(count_unique=n())
+
+line_plot<-ggplot(uniques_by_year)+
+  geom_line(aes(x=year,y=count_unique))
+line_plot+labs(x="Year",
+               y="# of unique songs",
+               title="Musical Diversity - Unique songs on Billboard per year")
+```
+
+The musical diversity peaked in the mid 1960s over 800 unique songs, but took a hit and kept dropping till right after 2000 where it hit it's least unique songs and started increasing to match it's peak in a span of 20 years
+
+#### Part C
+
+```{r billboardc,echo=FALSE,warning=FALSE}
+top_19<-billboard%>%
+  group_by(song,performer)%>%
+  summarize(count_instances=n())%>%
+  filter(count_instances>=10)
+
+grouped<-top_19%>%
+  group_by(performer)%>%
+  summarise(song_count=n())%>%
+  filter(song_count>=30)
+
+ggplot(grouped,aes(x=performer,y=song_count))+
+  geom_bar(stat='identity')+
+  xlab("Song Count")+
+  ylab("Artists")+
+  ggtitle("Artists with more than 30 ten-week hits")+
+  coord_flip()
+```
+
+### Visual Story telling Part 1: Green Buildings
+
+#### Outlier marking:
+
+```{r greenbuildings,echo=FALSE,warning=FALSE}
+greenbuildings <- read.csv("C:/Vaishnavi files/01 MSBA Files/04 Subjects/01 Summer/01 Introduction to Machine Learning/greenbuildings.csv")
+
+#checking occupancy rates
+ggplot(greenbuildings)+
+  geom_boxplot(aes(x=leasing_rate))+
+  xlab("Occupancy Rate")+
+  labs(title="Occupancy Rate across all buildings in dataset")
+
+#checking occupancy rates by green rating
+ggplot(greenbuildings)+
+  geom_boxplot(aes(x=leasing_rate))+
+  xlab("Occupancy Rate")+
+  labs(title="Occupancy Rate for Non-Green[NG](0) and Green[G](1) buildings")+
+  facet_wrap(~green_rating)
+
+#checking if occupancy rate has an impact on rent
+q_50_oc=quantile(greenbuildings$leasing_rate,0.50)
+greenbuildings<-greenbuildings%>%
+  mutate(occupancy_groups=ifelse(leasing_rate<q_50_oc,"0%-50%","50%-100%"))
+ggplot(greenbuildings,aes(x=leasing_rate,y=occupancy_groups))+
+  geom_boxplot()+
+  xlab("Rent")+
+  ylab("Occupancy Rates")+
+  labs(title="Range of rent based on occupancy rates for NG(0) and G(1) buildings")+
+  facet_wrap(~green_rating)
+```
+
+Findings:
+
+-   The occupancy rates of the buildings in the dataset fall within 0 to 100, but the quantile range of 25 and 75 fall between 78% to 96% occupancy
+
+-   When we look at green and non-green buildings separately, the green buildings had only a few buildings that had a low occupancy rate but vice versa for non-green buildings
+
+-   Looking at rent for these occupancy rates between NG (non-green) and G(green) buildings, we see that the rent for non-green buildings with a lower occupancy rate was higher than green buildings
+
+Since there is an impact of occupancy rate on green buildings as well as the rent, it would be better to now mark any outliers based on this variable as of now, but to proceed with the given dataset as it is.
+
+#### Finding variables that may impact rent
+
+```{r greenbuildings 2,echo=FALSE,warning=FALSE}
+
+#copying greenbuildings into df
+df<-greenbuildings
+
+#checking if there are NA values in the dataset
+#any(is.na(df))
+columns_with_na <- colSums(is.na(df)) > 0
+#names(df)[columns_with_na]
+filled_empl_gr <- df$empl_gr
+filled_empl_gr[is.na(filled_empl_gr)] <- 0
+df$empl_gr <- filled_empl_gr
+#any(is.na(df))
+
+#correlation between rent and other factors
+numeric_columns <- sapply(df, is.numeric)
+correlation_matrix <- cor(df[, numeric_columns])
+corrplot(correlation_matrix)
+```
+
+Findings:
+
+-   From the correlation plot we can see that cluster, size, occupancy rate, stories, class_a, electricity_costs and cluster rent were positively correlated with rent
+
+-   Age, total number of degree days, class_b, renovated were negatively correlated with rent
+
+Considering the information we have about the building - **size, age, stories, class and occupancy rate** were relevant to filter for - so that it is similar to the case of the building we are going for
+
+#### Filtering the dataset to get buildings similar to the specifications of the building to be constructed
+
+```{r greenbuildings 3,echo=FALSE,warning=FALSE}
+
+#creating a column for classes
+df<-df%>%
+  mutate(Classes=ifelse(df$class_a==1,"Class A",ifelse(df$class_b==1,"Class B","Class C")))
+
+#------------------------------------------------------------------
+
+#checking the size of the buildings in the dataset
+summary(df$size)
+ggplot(df)+
+  geom_boxplot(aes(x=size))+
+  xlim(0,300000)+
+  xlab("Size")+
+  labs(title="Range of building size in the dataset")
+
+#checking if size of the buildings impacted rent
+q_50_s=quantile(df$size,0.50)
+q_75_s=quantile(df$size,0.75)
+df<-df%>%
+  mutate(size_groups=ifelse(size<q_50_s,"0-50th Quantile",ifelse(size<q_75_s,"50-75th Quantile","75-100th Quantile")))
+rent_size<-df%>%
+  group_by(green_rating,size_groups)%>%
+  summarise(median_rent=median(Rent),
+            n=n())
+rent_size
+
+#filtering for buildings with relevant size
+df<-df%>%
+  filter(size>=q_50_s)%>%
+  filter(size<q_75_s)
+
+#------------------------------------------------------------------
+
+#checking the age of the buildings in the dataset
+summary(df$age)
+ggplot(df)+
+  geom_boxplot(aes(x=age))+
+  xlab("Age")+
+  labs(title="Range of building age in the dataset")
+
+#new variable with new and old as categories
+median_age<-median(df$age)
+median_age
+df<-df%>%
+  mutate(new_old=ifelse(age<median_age,'New','Old'))
+rent_age<-df%>%
+  group_by(green_rating,new_old)%>%
+  summarise(median_rent=median(Rent),
+            n=n())
+rent_age
+
+#filtering for new buildings
+df<-df%>%
+  filter(new_old=="New")
+
+#-----------------------------------------------------------------
+
+#checking the number of stories of buildings in the dataset
+summary(df$stories)
+ggplot(df)+
+  geom_boxplot(aes(x=stories))+
+  xlab("Number of Stories")+
+  labs(title="Range of number of stories of buildings in the dataset")
+
+#checking if number of stories impacted rent
+q_25_st=quantile(df$stories,0.25)
+q_50_st=quantile(df$stories,0.50)
+q_75_st=quantile(df$stories,0.75)
+q_90_st=quantile(df$stories,0.90)
+df<-df%>%
+  mutate(stories_groups=ifelse(stories<q_25_st,"0-25th Quantile",ifelse(stories<q_50_st,"25-50th Quantile",ifelse(stories<q_75_st,"50-75th Quantile",ifelse(stories<q_90_st,"75-90th Quantile","90-100th Quantile")))))
+rent_stories<-df%>%
+  group_by(green_rating,stories_groups)%>%
+  summarise(median_rent=median(Rent),
+            n=n())
+print("\n")
+print(paste("25th Quantile:",q_25_st))
+print(paste("50th Quantile:",q_50_st))
+print(paste("75th Quantile:",q_75_st))
+print(paste("90th Quantile:",q_90_st))
+print(rent_stories)
+
+#filtering for stories
+df<-df%>%
+  filter(stories>=q_50_st)%>%
+  filter(stories<q_90_st)
+
+```
+
+Findings:
+
+-   The dataset had a very high range in terms of size and also affected rent, so filtered the dataset to keep it within the limits of the 50th quantile and 75th quantile range [128838 sq.ft to 294212 sq.ft] given that the building under consideration is estimated to be 250000 sq.ft
+
+-   It also had a long range in terms of the age of the building, which also affected rent, so filtered the dataset to keep relatively new buildings below the median age of all buildings (29 years)
+
+-   The dataset had a range of buildings with 1 story to 41 stories, which affected rent as well, so filtered to keep buildings that have 12 to 21 stories pertaining to the 50th and 90th quantiles respectively
+
+#### Finding the rent of green and non-green buildings in the new filtered dataset
+
+```{r greenbuildings 3,echo=FALSE,warning=FALSE}
+
+#checking median rent between green and non-green buildings in filtered df
+g_or_ng<-ifelse(df$green_rating==1,"Green","Non-Green")
+df<-data.frame(df,g_or_ng)
+
+median_rent<-df%>%
+  group_by(g_or_ng)%>%
+  summarise(median_rent=median(Rent),
+            n=n())
+median_rent
+print(paste("Loss in rent per year =",(30-28.6)*250000))
+ggplot(df)+
+  geom_boxplot(aes(x=Rent,y=g_or_ng))
+ggplot(median_rent,aes(x=g_or_ng,y=median_rent))+
+  geom_bar(stat="identity")+
+  xlab("Green/Non-Green buildings")+
+  ylab("Median Rent")+
+  labs(title="Median rent across NG and G buildings")
+
+#checking if electricity bill is lesser in green buildings
+median_elec<-df%>%
+  group_by(g_or_ng)%>%
+  summarise(median_elec=median(Electricity_Costs),
+            n=n())
+median_elec
+ggplot(median_elec,aes(x=g_or_ng,y=median_elec))+
+  geom_bar(stat="identity")+
+  xlab("Green/Non-Green buildings")+
+  ylab("Median Measure of Electricity")+
+  labs(title="Median measure of electricity across NG and G buildings")+
+  ylim(0,0.05)
+  
+#class based segmentation of rent
+rent_class<-df%>%
+  group_by(g_or_ng,Classes)%>%
+  summarise(median_rent=median(Rent),
+            n=n())
+rent_class
+ggplot(rent_class,aes(x=Classes,y=median_rent))+
+  geom_bar(stat="identity")+
+  xlab("Classes")+
+  ylab("Median Rent")+
+  labs(title="Median rent across buildings from different classes")+
+  facet_wrap(~g_or_ng)
+
+#occupancy based segmentation of rent
+summary(df$leasing_rate)
+ggplot(df)+
+  geom_boxplot(aes(x=leasing_rate))
+
+
+q_25_oc=quantile(df$leasing_rate,0.25)
+q_50_oc=quantile(df$leasing_rate,0.50)
+q_75_oc=quantile(df$leasing_rate,0.75)
+df<-df%>%
+  mutate(occupancy_groups=ifelse(leasing_rate<q_50_oc,"0%-50%","50%-100%"))
+
+#occupancy based
+rent_occ<-df%>%
+  group_by(g_or_ng,occupancy_groups)%>%
+  summarise(median_rent=median(Rent),
+            n=n())
+rent_occ
+ggplot(rent_occ,aes(x=occupancy_groups,y=median_rent))+
+  geom_bar(stat="identity")+
+  xlab("Occupancy Groups")+
+  ylab("Median Rent")+
+  labs(title="Median rent across buildings with different occupancy ranges")+
+  facet_wrap(~g_or_ng)
+```
+
+Findings:
+
+-   Looking at the median value of rent across all green and non-green buildings, green buildings have a lesser rent value compared to non-green buildings
+
+-   When we look at the class and occupancy rates, we get similar results of green buildings having a lesser value than non-green buildings irrespective of the class or the occupancy rate
+
+#### Recommendation:
+
+Though green buildings are looked at positively at an environment perspective, in an economical standpoint, building a green building would not only increase the construction costs, but also produce lesser rent compared to non-green buildings, leading to a loss of 5 million dollars during construction along with a loss in rent of 350,000 dollars per year. Therefore constructing a non-green better is going to yield more profits from an economic point of view
