@@ -11,8 +11,8 @@ This repo consists of solutions to coursework STA380- Part 2 for Prof. James Sco
 * Wrangling the Billboard Top 100
 * Visual storytelling part 1: Green Buildings
 * [Visual storytelling part 2: Capital Metro data](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/CapMetro.ipynb)
-* Clustering and dimensionality reduction
-* Marketing segmentation
+* [Clustering and dimensionality reduction](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Dimensionality%20Reduction%20and%20Market%20Segmentation_Q5%266.ipynb)
+* [Marketing segmentation](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Dimensionality%20Reduction%20and%20Market%20Segmentation_Q5%266.ipynb)
 * [The Reuters corpus](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/Reuters_Corpus_Q7.ipynb)
 * Association rule mining
 * [Image classification with neural networks](https://github.com/dinesh-bandaru/STA380-Part2-Assignment/blob/main/ImageClassification.ipynb)
